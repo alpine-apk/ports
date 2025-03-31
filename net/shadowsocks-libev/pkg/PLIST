@@ -1,0 +1,12 @@
+@comment $OpenBSD: PLIST,v 1.0 2025/03/30 00:00:00 xiaoding Exp $
+lib/libshadowsocks-libev.a
+lib/libshadowsocks-libev.la
+lib/libshadowsocks-libev.so.2.0
+bin/ss-local
+bin/ss-tunnel
+bin/ss-server
+bin/ss-manager
+include/shadowsocks.h
+lib/pkgconfig/shadowsocks-libev.pc
+etc/shadowsocks-libev/config.json.sample
+etc/rc.d/shadowsocks_libev

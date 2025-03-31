@@ -1,0 +1,6 @@
+Lightweight tunnel proxy which can help you get through firewalls.
+Shadowsocks-libev is a secure SOCKS5 proxy written in C, using libev for
+performance. It supports multiple encryption methods and is designed for
+privacy and bypassing network restrictions.
+
+WWW: https://github.com/shadowsocks/shadowsocks-libev

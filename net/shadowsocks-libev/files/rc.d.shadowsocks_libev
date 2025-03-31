@@ -1,0 +1,27 @@
+#!/bin/ksh
+
+# PROVIDE: shadowsocks_libev
+# REQUIRE: LOGIN cleanvar
+# KEYWORD: shutdown
+
+# Add the following lines to /etc/rc.conf.local to enable shadowsocks-libev:
+# shadowsocks_libev_enable="YES"    # Set to "NO" by default
+# shadowsocks_libev_config="/usr/local/etc/shadowsocks-libev/config.json"  # Config file path
+
+. /etc/rc.subr
+
+name="shadowsocks_libev"
+rcvar="${name}_enable"
+
+: ${shadowsocks_libev_enable="NO"}
+: ${shadowsocks_libev_config="/usr/local/etc/shadowsocks-libev/config.json"}
+
+daemon="/usr/local/bin/ss-server"
+daemon_flags="-f /var/run/${name}.pid -c ${shadowsocks_libev_config}"
+
+pproc_check="${daemon}"
+pidfile="/var/run/${name}.pid"
+required_files="${shadowsocks_libev_config}"
+rc_bg=YES
+rc_reload=NO
+run_rc_command "$1"
