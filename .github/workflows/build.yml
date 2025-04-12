@@ -103,8 +103,7 @@ jobs:
 
 
       - name: Upload package artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.port }}-package
-          path: ${{ github.workspace }}/artifacts/${{ matrix.port }}/*.tgz
+         name: ${{ replace(matrix.port, '/', '-') }}-package
+         path: ${{ github.workspace }}/artifacts/${{ matrix.port }}/*.tgz
