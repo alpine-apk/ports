@@ -102,8 +102,14 @@ jobs:
           echo "Build completed for ${{ matrix.port }}"
 
 
+      - name: Set artifact name
+        id: set_artifact_name
+        run: |
+         ARTIFACT_NAME=$(echo "${{ matrix.port }}" | sed 's/\//-/g')-package
+         echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
-        with:
-         name: ${{ replace(matrix.port, '/', '-') }}-package
-         path: ${{ github.workspace }}/artifacts/${{ matrix.port }}/*.tgz
+          with:
+          name: ${{ steps.set_artifact_name.outputs.ARTIFACT_NAME }}
+          path: ${{ github.workspace }}/artifacts/${{ matrix.port }}/*.tgz
