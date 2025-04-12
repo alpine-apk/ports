@@ -101,15 +101,6 @@ jobs:
           cp /usr/ports/packages/amd64/all/*.tgz $GITHUB_WORKSPACE/artifacts/${{ matrix.port }}/
           echo "Build completed for ${{ matrix.port }}"
 
-      - name: Upload debug artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-files-${{ matrix.port }}
-          path: |
-            ${{ github.workspace }}/artifacts/${{ matrix.port }}/fetch_debug.txt
-            ${{ github.workspace }}/artifacts/${{ matrix.port }}/Makefile_debug.txt
-            ${{ github.workspace }}/artifacts/${{ matrix.port }}/distinfo
 
       - name: Upload package artifact
         if: success()
