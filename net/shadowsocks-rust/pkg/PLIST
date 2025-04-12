@@ -1,0 +1,7 @@
+bin/sslocal
+bin/ssserver
+bin/ssmanager
+bin/ssurl
+bin/ssservice
+share/examples/shadowsocks-rust/
+share/examples/shadowsocks-rust/config.json

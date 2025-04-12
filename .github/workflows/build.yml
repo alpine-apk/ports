@@ -1,4 +1,4 @@
-name: Test OpenBSD Port
+name: Test OpenBSD Ports
 
 on:
   push:
@@ -8,10 +8,13 @@ on:
     branches:
       - main
 
-
 jobs:
   build-openbsd-port:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        port: [ "net/shadowsocks-libev", "net/shadowsocks-rust" ]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,7 +27,16 @@ jobs:
           sync: nfs
           prepare: |
             pkg_add -u
-            pkg_add autoconf automake libtool gmake git libev mbedtls pcre libsodium libcares  
+            # Common dependencies
+            pkg_add git gmake
+            # shadowsocks-libev dependencies
+            if [ "${{ matrix.port }}" = "net/shadowsocks-libev" ]; then
+              pkg_add autoconf automake libtool libev mbedtls pcre libsodium libcares
+            fi
+            # shadowsocks-rust dependencies
+            if [ "${{ matrix.port }}" = "net/shadowsocks-rust" ]; then
+              pkg_add rust
+            fi
 
       - name: Install ports tree
         shell: openbsd {0}
@@ -45,20 +57,25 @@ jobs:
       - name: Copy port files and generate distinfo
         shell: openbsd {0}
         run: |
-          echo "Copying port files"
-          ls -l $GITHUB_WORKSPACE/net/shadowsocks-libev/ || (echo "Source directory not found" && exit 1)
-          mkdir -p /usr/ports/net/shadowsocks-libev/patches
-          cp -r $GITHUB_WORKSPACE/net/shadowsocks-libev/* /usr/ports/net/shadowsocks-libev/ || (echo "Copy failed" && exit 1)
-          cd /usr/ports/net/shadowsocks-libev
+          echo "Copying port files for ${{ matrix.port }}"
+          ls -l $GITHUB_WORKSPACE/${{ matrix.port }}/ || (echo "Source directory not found" && exit 1)
+          mkdir -p /usr/ports/${{ matrix.port }}/patches
+          cp -r $GITHUB_WORKSPACE/${{ matrix.port }}/* /usr/ports/${{ matrix.port }}/ || (echo "Copy failed" && exit 1)
+          cd /usr/ports/${{ matrix.port }}
           ls -l .  # Verify directory contents
-          ls -l patches/  # Verify patch file if exists
+          ls -l patches/  # Verify patch files if exist
           cat -et Makefile
           cat Makefile > Makefile_debug.txt
           echo "Generating distinfo"
           make makesum || (echo "Failed to generate distinfo for tarball" && exit 1)
-          if [ -f patches/patch-libcork_src_libcork_posix_env_c ]; then
-            sha256 patches/patch-libcork_src_libcork_posix_env_c | awk '{print "SHA256 (" $4 ") = " $1}' >> distinfo
-            wc -c patches/patch-libcork_src_libcork_posix_env_c | awk '{print "SIZE (" $2 ") = " $1}' >> distinfo
+          # Add patch checksums if needed
+          if [ -d patches ]; then
+            for patch in patches/*; do
+              if [ -f "$patch" ]; then
+                sha256 "$patch" | awk '{print "SHA256 (" $4 ") = " $1}' >> distinfo
+                wc -c "$patch" | awk '{print "SIZE (" $2 ") = " $1}' >> distinfo
+              fi
+            done
           fi
           cat distinfo  # Log distinfo contents
           echo "Port files copied and distinfo generated"
@@ -66,8 +83,8 @@ jobs:
       - name: Build and package with debug output
         shell: openbsd {0}
         run: |
-          echo "Starting build"
-          cd /usr/ports/net/shadowsocks-libev
+          echo "Starting build for ${{ matrix.port }}"
+          cd /usr/ports/${{ matrix.port }}
           ls -l /usr/ports/infrastructure/mk/bsd.port.mk || (echo "bsd.port.mk missing before make" && exit 1)
           ls -l distinfo || (echo "distinfo missing" && exit 1)
           make -d A NO_DEPENDS=1 fetch > fetch_debug.txt 2>&1 || (cat fetch_debug.txt && exit 1)
@@ -77,26 +94,26 @@ jobs:
           make NO_DEPENDS=1 package
           ls -lh /usr/ports/packages/$(uname -m)/all/
           echo "Copying artifacts to host workspace"
-          mkdir -p $GITHUB_WORKSPACE/artifacts
-          cp /usr/ports/net/shadowsocks-libev/fetch_debug.txt $GITHUB_WORKSPACE/artifacts/
-          cp /usr/ports/net/shadowsocks-libev/Makefile_debug.txt $GITHUB_WORKSPACE/artifacts/
-          cp /usr/ports/net/shadowsocks-libev/distinfo $GITHUB_WORKSPACE/artifacts/
-          cp /usr/ports/packages/amd64/all/shadowsocks-libev-3.3.5p3.tgz $GITHUB_WORKSPACE/artifacts/
-          echo "Build completed"
+          mkdir -p $GITHUB_WORKSPACE/artifacts/${{ matrix.port }}
+          cp fetch_debug.txt $GITHUB_WORKSPACE/artifacts/${{ matrix.port }}/
+          cp Makefile_debug.txt $GITHUB_WORKSPACE/artifacts/${{ matrix.port }}/
+          cp distinfo $GITHUB_WORKSPACE/artifacts/${{ matrix.port }}/
+          cp /usr/ports/packages/amd64/all/*.tgz $GITHUB_WORKSPACE/artifacts/${{ matrix.port }}/
+          echo "Build completed for ${{ matrix.port }}"
 
       - name: Upload debug artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-files
+          name: debug-files-${{ matrix.port }}
           path: |
-            ${{ github.workspace }}/artifacts/fetch_debug.txt
-            ${{ github.workspace }}/artifacts/Makefile_debug.txt
-            ${{ github.workspace }}/artifacts/distinfo
+            ${{ github.workspace }}/artifacts/${{ matrix.port }}/fetch_debug.txt
+            ${{ github.workspace }}/artifacts/${{ matrix.port }}/Makefile_debug.txt
+            ${{ github.workspace }}/artifacts/${{ matrix.port }}/distinfo
 
       - name: Upload package artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: shadowsocks-libev-package
-          path: ${{ github.workspace }}/artifacts/shadowsocks-libev-3.3.5p3.tgz
+          name: ${{ matrix.port }}-package
+          path: ${{ github.workspace }}/artifacts/${{ matrix.port }}/*.tgz
